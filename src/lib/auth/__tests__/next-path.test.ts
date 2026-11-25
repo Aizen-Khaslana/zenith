@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { sanitizeNext } from "../next-path";
+import { loginHref, postLoginPath, sanitizeNext } from "../next-path";
 
 // PRD 5.8, K-24, dan 10.4 butir 7 (backslash dan karakter kontrol ditolak).
 describe("sanitizeNext", () => {
@@ -44,5 +44,32 @@ describe("sanitizeNext", () => {
     [{ path: "/dashboard" }],
   ])("mengganti nilai bukan string %p dengan /", (value) => {
     expect(sanitizeNext(value)).toBe("/");
+  });
+});
+
+// Tujuan setelah masuk (PRD 5.0: "/" mengarah ke /dashboard bila sudah masuk).
+describe("postLoginPath", () => {
+  test.each([
+    ["/settings", "/settings"],
+    ["/directories/abc/import", "/directories/abc/import"],
+    ["/", "/dashboard"],
+    ["//evil.com", "/dashboard"],
+    ["/\\evil.com", "/dashboard"],
+    [undefined, "/dashboard"],
+  ])("next %p menuju %p", (value, expected) => {
+    expect(postLoginPath(value)).toBe(expected);
+  });
+});
+
+// Alamat /login dengan next (dipakai requireSession dan errorCallbackURL).
+describe("loginHref", () => {
+  test.each([
+    ["/settings", "/login?next=%2Fsettings"],
+    ["/dashboard?dir=a&b=1", "/login?next=%2Fdashboard%3Fdir%3Da%26b%3D1"],
+    ["/", "/login"],
+    ["//evil.com", "/login"],
+    [null, "/login"],
+  ])("next %p menjadi %p", (value, expected) => {
+    expect(loginHref(value)).toBe(expected);
   });
 });

@@ -4,14 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme {
+@theme inline {
+  /* --font-inter dipasang next/font pada <html> (src/app/layout.tsx). Jangan
+     menulis --font-sans: var(--font-sans): rujukan diri itu siklik sehingga
+     font-family tidak sah dan browser kembali ke serif bawaan. */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-}
-
-@theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  --color-panel-border: var(--panel-border);
+  --color-brand-accent-strong: var(--brand-accent-strong);
   --color-panel: var(--panel);
   --color-panel-foreground: var(--panel-foreground);
   --color-panel-muted-foreground: var(--panel-muted-foreground);
@@ -95,7 +96,10 @@
   --panel: #1c3b2b;
   --panel-foreground: #ffffff;
   --panel-muted-foreground: #a9c4b5; /* turunan */
+  --panel-border: #31503d;
   --brand-accent: #48d486;
+  /* Teks aksen hijau di atas latar terang (kontras 5,65 di atas putih). */
+  --brand-accent-strong: #187645;
 
   --sidebar: #102b20;
   --sidebar-foreground: #ffffff;
@@ -108,7 +112,7 @@
   --sidebar-ring: #48d486;
 
   /* Status kesehatan. SEHAT dari desain, RAWAN dan KRITIS turunan (P9). */
-  --status-sehat: #1a7f4b;
+  --status-sehat: #187645;
   --status-sehat-soft: #e8f1ea;
   --status-rawan: #b45309;
   --status-rawan-soft: #fef3c7;
