@@ -1,12 +1,18 @@
-import { type Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
 
-import { env } from "@/env";
+// Dibaca langsung dari process.env (bun run memuat .env) agar drizzle-kit
+// tidak bergantung pada alias tsconfig atau validasi env aplikasi.
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error("DATABASE_URL belum diisi");
 
-export default {
-  schema: "./src/server/db/schema.ts",
-  dialect: "sqlite",
+export default defineConfig({
+  schema: ["./src/server/db/auth-schema.ts", "./src/server/db/schema.ts"],
+  out: "./drizzle",
+  dialect: "turso",
   dbCredentials: {
-    url: env.DATABASE_URL,
+    url,
+    authToken: process.env.TURSO_AUTH_TOKEN,
   },
-  tablesFilter: ["zenith_*"],
-} satisfies Config;
+  strict: true,
+  verbose: true,
+});

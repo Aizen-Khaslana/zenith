@@ -1,0 +1,3 @@
+[test]
+# Menghapus kredensial database bersama sebelum tes dimuat (PRD Bagian 9).
+preload = ["./src/test/setup.ts"]

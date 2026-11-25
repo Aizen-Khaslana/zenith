@@ -1,19 +1,24 @@
-import { createClient, type Client } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
+import "server-only";
 
 import { env } from "@/env";
-import * as schema from "./schema";
+import { createDb, type DbHandle } from "./client";
 
 /**
- * Cache the database connection in development. This avoids creating a new connection on every HMR
- * update.
+ * Cache koneksi di development agar HMR tidak membuat koneksi baru.
+ * Yang di-cache adalah seluruh handle sehingga `ready` tidak dibuat ulang.
  */
 const globalForDb = globalThis as unknown as {
-  client: Client | undefined;
+  dbHandle: DbHandle | undefined;
 };
 
-export const client =
-  globalForDb.client ?? createClient({ url: env.DATABASE_URL });
-if (env.NODE_ENV !== "production") globalForDb.client = client;
+const handle =
+  globalForDb.dbHandle ??
+  createDb({ url: env.DATABASE_URL, authToken: env.TURSO_AUTH_TOKEN });
+if (env.NODE_ENV !== "production") globalForDb.dbHandle = handle;
 
-export const db = drizzle(client, { schema });
+// Aplikasi gagal start bila foreign key tidak aktif (K-13).
+await handle.ready;
+
+export const client = handle.client;
+export const db = handle.db;
+export type { Db } from "./client";

@@ -1,23 +1,16 @@
-import { betterAuth } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import "server-only";
 
 import { env } from "@/env";
 import { db } from "@/server/db";
+import { createAuth } from "./create-auth";
 
-export const auth = betterAuth({
-  database: drizzleAdapter(db, {
-    provider: "sqlite", // or "pg" or "mysql"
-  }),
-  emailAndPassword: {
-    enabled: true,
-  },
-  socialProviders: {
-    github: {
-      clientId: env.BETTER_AUTH_GITHUB_CLIENT_ID,
-      clientSecret: env.BETTER_AUTH_GITHUB_CLIENT_SECRET,
-      redirectURI: "http://localhost:3000/api/auth/callback/github",
-    },
+export const auth = createAuth(db, {
+  secret: env.BETTER_AUTH_SECRET,
+  baseURL: env.BETTER_AUTH_URL,
+  google: {
+    clientId: env.GOOGLE_CLIENT_ID,
+    clientSecret: env.GOOGLE_CLIENT_SECRET,
   },
 });
 
-export type Session = typeof auth.$Infer.Session;
+export type { Session } from "./create-auth";

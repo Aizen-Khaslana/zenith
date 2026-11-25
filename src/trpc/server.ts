@@ -5,7 +5,7 @@ import { headers } from "next/headers";
 import { cache } from "react";
 
 import { createCaller, type AppRouter } from "@/server/api/root";
-import { createTRPCContext } from "@/server/api/trpc";
+import { createTRPCContext } from "@/server/api/context";
 import { createQueryClient } from "./query-client";
 
 /**
@@ -22,7 +22,11 @@ const createContext = cache(async () => {
 });
 
 const getQueryClient = cache(createQueryClient);
-const caller = createCaller(createContext);
+// TODO: hapus saat router pertama ditambahkan ke appRouter. Cast sementara ini
+// hanya ada karena appRouter masih kosong pada WP-01, sehingga pemeriksaan
+// generic createHydrationHelpers salah membaca AppRouter sebagai AnyRouter.
+type HydrationCaller = Parameters<typeof createHydrationHelpers<AppRouter>>[0];
+const caller = createCaller(createContext) as unknown as HydrationCaller;
 
 export const { trpc: api, HydrateClient } = createHydrationHelpers<AppRouter>(
   caller,

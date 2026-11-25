@@ -1,134 +1,208 @@
-import { relations, sql } from "drizzle-orm";
-import { index, sqliteTable } from "drizzle-orm/sqlite-core";
+// Tabel domain Zenith (PRD Lampiran A.4). Hanya directories yang membawa
+// user_id; tabel di bawahnya diakses lewat direktori yang sudah diverifikasi.
+import { sql } from "drizzle-orm";
+import {
+  check,
+  index,
+  integer,
+  real,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
-/**
- * Multi-project schema prefix helper
- */
+import { users } from "./auth-schema";
 
-// Posts example table
-export const posts = sqliteTable(
-  "post",
-  (d) => ({
-    id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-    name: d.text({ length: 256 }),
-    createdById: d
-      .text({ length: 255 })
+export const directories = sqliteTable(
+  "directories",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
       .notNull()
-      .references(() => user.id),
-    createdAt: d
-      .integer({ mode: "timestamp" })
-      .default(sql`(unixepoch())`)
-      .notNull(),
-    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-  }),
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("directories_user_created_idx").on(t.userId, t.createdAt)],
+);
+
+export const importBatches = sqliteTable(
+  "import_batches",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    directoryId: text("directory_id")
+      .notNull()
+      .references(() => directories.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    fileType: text("file_type", {
+      enum: ["XLSX", "XLS", "CSV", "MANUAL"],
+    }).notNull(),
+    rowCount: integer("row_count").notNull(),
+    openingBalance: integer("opening_balance").notNull().default(0),
+    periodStart: text("period_start").notNull(),
+    periodEnd: text("period_end").notNull(),
+    dayCount: integer("day_count").notNull(),
+    activeDayCount: integer("active_day_count").notNull(), // jumlah tanggal unik dengan pengeluaran
+    engineVersion: text("engine_version").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
   (t) => [
-    index("created_by_idx").on(t.createdById),
-    index("name_idx").on(t.name),
+    uniqueIndex("import_batches_directory_uq").on(t.directoryId),
+    check("import_batches_opening_balance_chk", sql`${t.openingBalance} >= 0`),
+    check("import_batches_period_chk", sql`${t.periodEnd} >= ${t.periodStart}`),
   ],
 );
 
-// Better Auth core tables
-export const user = sqliteTable("user", (d) => ({
-  id: d
-    .text({ length: 255 })
-    .notNull()
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  name: d.text({ length: 255 }),
-  email: d.text({ length: 255 }).notNull().unique(),
-  emailVerified: d.integer({ mode: "boolean" }).default(false),
-  image: d.text({ length: 255 }),
-  createdAt: d
-    .integer({ mode: "timestamp" })
-    .default(sql`(unixepoch())`)
-    .notNull(),
-  updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-}));
-
-export const userRelations = relations(user, ({ many }) => ({
-  account: many(account),
-  session: many(session),
-}));
-
-export const account = sqliteTable(
-  "account",
-  (d) => ({
-    id: d
-      .text({ length: 255 })
-      .notNull()
+export const transactions = sqliteTable(
+  "transactions",
+  {
+    id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    userId: d
-      .text({ length: 255 })
+    batchId: text("batch_id")
       .notNull()
-      .references(() => user.id),
-    accountId: d.text({ length: 255 }).notNull(),
-    providerId: d.text({ length: 255 }).notNull(),
-    accessToken: d.text(),
-    refreshToken: d.text(),
-    accessTokenExpiresAt: d.integer({ mode: "timestamp" }),
-    refreshTokenExpiresAt: d.integer({ mode: "timestamp" }),
-    scope: d.text({ length: 255 }),
-    idToken: d.text(),
-    password: d.text(),
-    createdAt: d
-      .integer({ mode: "timestamp" })
-      .default(sql`(unixepoch())`)
-      .notNull(),
-    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-  }),
-  (t) => [index("account_user_id_idx").on(t.userId)],
+      .references(() => importBatches.id, { onDelete: "cascade" }),
+    rowNumber: integer("row_number").notNull(),
+    trxDate: text("trx_date").notNull(), // YYYY-MM-DD
+    label: text("label").notNull(),
+    amount: integer("amount").notNull(),
+    type: text("type", { enum: ["PEMASUKAN", "PENGELUARAN"] }).notNull(),
+    expenseTier: text("expense_tier", {
+      enum: ["PRIMER", "SEKUNDER", "TERSIER"],
+    }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("transactions_batch_row_uq").on(t.batchId, t.rowNumber),
+    index("transactions_batch_date_idx").on(t.batchId, t.trxDate),
+    check("transactions_amount_chk", sql`${t.amount} > 0`),
+    check(
+      "transactions_type_chk",
+      sql`${t.type} IN ('PEMASUKAN','PENGELUARAN')`,
+    ),
+    check(
+      "transactions_tier_chk",
+      sql`${t.expenseTier} IS NULL OR ${t.expenseTier} IN ('PRIMER','SEKUNDER','TERSIER')`,
+    ),
+    check(
+      "transactions_tier_presence_chk",
+      sql`(${t.type} = 'PENGELUARAN') = (${t.expenseTier} IS NOT NULL)`,
+    ),
+  ],
 );
 
-export const accountRelations = relations(account, ({ one }) => ({
-  user: one(user, { fields: [account.userId], references: [user.id] }),
-}));
-
-export const session = sqliteTable(
-  "session",
-  (d) => ({
-    id: d
-      .text({ length: 255 })
-      .notNull()
+export const batchAnalytics = sqliteTable(
+  "batch_analytics",
+  {
+    batchId: text("batch_id")
       .primaryKey()
-      .$defaultFn(() => crypto.randomUUID()),
-    userId: d
-      .text({ length: 255 })
-      .notNull()
-      .references(() => user.id),
-    token: d.text({ length: 255 }).notNull().unique(),
-    expiresAt: d.integer({ mode: "timestamp" }).notNull(),
-    ipAddress: d.text({ length: 255 }),
-    userAgent: d.text({ length: 255 }),
-    createdAt: d
-      .integer({ mode: "timestamp" })
-      .default(sql`(unixepoch())`)
-      .notNull(),
-    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-  }),
-  (t) => [index("session_user_id_idx").on(t.userId)],
+      .references(() => importBatches.id, { onDelete: "cascade" }),
+    totalIncome: integer("total_income").notNull(),
+    totalExpense: integer("total_expense").notNull(),
+    expensePrimer: integer("expense_primer").notNull(),
+    expenseSekunder: integer("expense_sekunder").notNull(),
+    expenseTersier: integer("expense_tersier").notNull(),
+    currentBalance: integer("current_balance").notNull(),
+    ncfRatio: real("ncf_ratio"),
+    healthStatus: text("health_status", {
+      enum: ["SEHAT", "RAWAN", "KRITIS"],
+    }).notNull(),
+    ratioPrimer: real("ratio_primer"),
+    ratioSekunder: real("ratio_sekunder"),
+    ratioTersier: real("ratio_tersier"),
+    burnRate: real("burn_rate").notNull(),
+    runwayStatus: text("runway_status", {
+      enum: ["NORMAL", "TIDAK_TERHINGGA", "HABIS"],
+    }).notNull(),
+    runwayDays: real("runway_days"),
+    regressionStatus: text("regression_status", {
+      enum: [
+        "DATA_TIDAK_CUKUP",
+        "SUDAH_HABIS",
+        "ESTIMASI_RATA_RATA",
+        "DIPREDIKSI",
+        "TIDAK_HABIS",
+      ],
+    }).notNull(),
+    slopeM: real("slope_m"),
+    interceptC: real("intercept_c"),
+    depletionDate: text("depletion_date"), // terisi bila DIPREDIKSI atau ESTIMASI_RATA_RATA
+  },
+  (t) => [
+    check(
+      "batch_analytics_total_chk",
+      sql`${t.totalExpense} = ${t.expensePrimer} + ${t.expenseSekunder} + ${t.expenseTersier}`,
+    ),
+    check(
+      "batch_analytics_health_chk",
+      sql`${t.healthStatus} IN ('SEHAT','RAWAN','KRITIS')`,
+    ),
+  ],
 );
 
-export const sessionRelations = relations(session, ({ one }) => ({
-  user: one(user, { fields: [session.userId], references: [user.id] }),
-}));
-
-export const verification = sqliteTable(
-  "verification",
-  (d) => ({
-    id: d
-      .text({ length: 255 })
-      .notNull()
+export const simulations = sqliteTable(
+  "simulations",
+  {
+    id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    identifier: d.text({ length: 255 }).notNull(),
-    value: d.text({ length: 255 }).notNull(),
-    expiresAt: d.integer({ mode: "timestamp" }).notNull(),
-    createdAt: d
-      .integer({ mode: "timestamp" })
-      .default(sql`(unixepoch())`)
-      .notNull(),
-    updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-  }),
-  (t) => [index("verification_identifier_idx").on(t.identifier)],
+    batchId: text("batch_id")
+      .notNull()
+      .references(() => importBatches.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    scenarioType: text("scenario_type", {
+      enum: ["BARANG_IMPIAN", "UTANG"],
+    }).notNull(),
+    targetAmount: integer("target_amount").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date())
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [
+    uniqueIndex("simulations_batch_uq").on(t.batchId),
+    check("simulations_target_chk", sql`${t.targetAmount} > 0`),
+  ],
+);
+
+export const aiFeedbacks = sqliteTable(
+  "ai_feedbacks",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    batchId: text("batch_id")
+      .notNull()
+      .references(() => importBatches.id, { onDelete: "cascade" }),
+    scope: text("scope", { enum: ["ANALISIS", "SIMULASI"] }).notNull(),
+    source: text("source", { enum: ["GEMINI", "TEMPLATE"] }).notNull(),
+    modelName: text("model_name"),
+    narrative: text("narrative").notNull(),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    fallbackReason: text("fallback_reason", {
+      enum: ["NO_CONSENT", "TIMEOUT", "API_ERROR", "GROUNDING_FAILED"],
+    }),
+    latencyMs: integer("latency_ms"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (t) => [uniqueIndex("ai_feedbacks_batch_scope_uq").on(t.batchId, t.scope)],
 );
