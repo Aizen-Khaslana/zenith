@@ -5,6 +5,9 @@
 import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  // Indikator dev Next.js dipindah agar tidak menutupi footer sidebar.
+  devIndicators: { position: "bottom-right" },
+};
 
 export default config;
