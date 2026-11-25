@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { makeSignature } from "better-auth/crypto";
 import { count, eq } from "drizzle-orm";
 
-import { accounts, sessions, users, verifications } from "@/server/db/auth-schema";
+import {
+  accounts,
+  sessions,
+  users,
+  verifications,
+} from "@/server/db/auth-schema";
 import { createTestDb, type TestDb } from "@/server/db/__tests__/helpers";
 import { createAuth, type Auth } from "../create-auth";
 
@@ -24,7 +30,10 @@ afterEach(async () => {
   await t.cleanup();
 });
 
-async function countOf(table: typeof users | typeof sessions | typeof accounts | typeof verifications) {
+async function countOf(
+  table:
+    typeof users | typeof sessions | typeof accounts | typeof verifications,
+) {
   const [row] = await t.db.select({ n: count() }).from(table);
   return row?.n ?? 0;
 }
@@ -40,11 +49,11 @@ function post(path: string, body: unknown) {
 }
 
 /** Memulai masuk dengan Google tanpa jaringan: hanya membangun URL Google. */
-async function startGoogleSignIn() {
+async function startGoogleSignIn(errorCallbackURL = "/login") {
   const res = await post("/sign-in/social", {
     provider: "google",
     callbackURL: "/",
-    errorCallbackURL: "/login",
+    errorCallbackURL,
   });
   expect(res.status).toBe(200);
   const body = (await res.json()) as { url: string };
@@ -144,6 +153,27 @@ describe("pembatalan pada layar Google (AC-06.9)", () => {
     expect(await countOf(verifications)).toBe(0);
   });
 
+  test("pembatalan mempertahankan next pada errorCallbackURL (T3, Laporan-WP02)", async () => {
+    // Tombol masuk mengirim errorCallbackURL = loginHref(next), misalnya
+    // /login?next=%2Fsettings. Better Auth menambahkan error dengan "&".
+    const { state, cookies } = await startGoogleSignIn(
+      "/login?next=%2Fsettings",
+    );
+    const res = await auth.handler(
+      new Request(
+        `${BASE_URL}/api/auth/callback/google?error=access_denied&state=${encodeURIComponent(state ?? "")}`,
+        { method: "GET", headers: { cookie: cookies } },
+      ),
+    );
+    expect(res.status).toBe(302);
+    const location = new URL(res.headers.get("location") ?? "", BASE_URL);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("next")).toBe("/settings");
+    expect(location.searchParams.get("error")).toBe("access_denied");
+    expect(await countOf(users)).toBe(0);
+    expect(await countOf(sessions)).toBe(0);
+  });
+
   test("callback tanpa state yang sah juga kembali ke /login", async () => {
     const res = await auth.handler(
       new Request(`${BASE_URL}/api/auth/callback/google?error=access_denied`, {
@@ -152,7 +182,10 @@ describe("pembatalan pada layar Google (AC-06.9)", () => {
     );
     expect(res.status).toBe(302);
     const location = new URL(res.headers.get("location") ?? "", BASE_URL);
-    console.log("[AC-06.9] location tanpa state:", location.pathname + location.search);
+    console.log(
+      "[AC-06.9] location tanpa state:",
+      location.pathname + location.search,
+    );
     expect(location.pathname).toBe("/login");
     expect(await countOf(users)).toBe(0);
   });
@@ -227,8 +260,66 @@ describe("akun Google dan token OAuth (K-11, 10.4 butir 3)", () => {
 
   test("id memakai UUID", async () => {
     const created = await createGoogleUser();
-    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    const uuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
     expect(created.user.id).toMatch(uuid);
     expect(created.account.id).toMatch(uuid);
+  });
+});
+
+describe("Keluar (AC-06.10)", () => {
+  /** Cookie sesi bertanda tangan seperti yang ditulis Better Auth. */
+  async function sessionCookie(token: string) {
+    const ctx = await auth.$context;
+    const signature = await makeSignature(token, FAKE.secret);
+    const value = encodeURIComponent(`${token}.${signature}`);
+    return {
+      name: ctx.authCookies.sessionToken.name,
+      header: `${ctx.authCookies.sessionToken.name}=${value}`,
+    };
+  }
+
+  test("menghapus baris sessions, mengosongkan cookie, dan sesi tidak terbaca lagi", async () => {
+    const ctx = await auth.$context;
+    const { user } = await ctx.internalAdapter.createOAuthUser(
+      { name: "A", email: "a@example.com", emailVerified: true },
+      { providerId: "google", accountId: "google-123" },
+    );
+    const session = await ctx.internalAdapter.createSession(user.id);
+    expect(await countOf(sessions)).toBe(1);
+
+    const cookie = await sessionCookie(session.token);
+    const before = await auth.api.getSession({
+      headers: new Headers({ cookie: cookie.header }),
+    });
+    expect(before?.user.id).toBe(user.id);
+
+    const res = await auth.handler(
+      new Request(`${BASE_URL}/api/auth/sign-out`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          origin: BASE_URL,
+          cookie: cookie.header,
+        },
+        body: "{}",
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(await countOf(sessions)).toBe(0);
+
+    const cleared = res.headers
+      .getSetCookie()
+      .find((c) => c.startsWith(`${cookie.name}=`));
+    console.log("[AC-06.10] set-cookie:", cleared);
+    expect(cleared).toBeDefined();
+    expect(cleared).toMatch(/Max-Age=0/i);
+
+    const after = await auth.api.getSession({
+      headers: new Headers({ cookie: cookie.header }),
+    });
+    expect(after).toBeNull();
+    // Pengguna dan akun tetap ada: Keluar hanya mengakhiri sesi.
+    expect(await countOf(users)).toBe(1);
   });
 });
