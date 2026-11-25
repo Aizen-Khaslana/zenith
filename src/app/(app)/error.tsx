@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect } from "react";
 
 import { ErrorState } from "@/components/feedback/error-state";
 
@@ -13,9 +14,20 @@ export default function AppError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+
   useEffect(() => {
     console.error(error);
   }, [error]);
 
-  return <ErrorState message={LOAD_FAILED} onRetry={reset} />;
+  // reset() saja hanya merender ulang di klien. Galat dari Server Component
+  // perlu router.refresh() agar data server diambil ulang, dalam satu transisi.
+  function handleRetry() {
+    startTransition(() => {
+      router.refresh();
+      reset();
+    });
+  }
+
+  return <ErrorState message={LOAD_FAILED} onRetry={handleRetry} />;
 }
