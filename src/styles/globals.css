@@ -5,13 +5,24 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+  --color-panel: var(--panel);
+  --color-panel-foreground: var(--panel-foreground);
+  --color-panel-muted-foreground: var(--panel-muted-foreground);
+  --color-brand-accent: var(--brand-accent);
+  --color-sidebar-muted-foreground: var(--sidebar-muted-foreground);
+  --color-status-sehat: var(--status-sehat);
+  --color-status-sehat-soft: var(--status-sehat-soft);
+  --color-status-rawan: var(--status-rawan);
+  --color-status-rawan-soft: var(--status-rawan-soft);
+  --color-status-kritis: var(--status-kritis);
+  --color-status-kritis-soft: var(--status-kritis-soft);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -53,73 +64,60 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Nilai disampel dari UIReff/ (Analisis-WP02 bagian 6). Nilai bertanda
+     "turunan" tidak ada di desain dan ditinjau tim (P9). */
+  --background: #f6f9f6;
+  --foreground: #102b20;
+  --card: #ffffff;
+  --card-foreground: #102b20;
+  --popover: #ffffff;
+  --popover-foreground: #102b20;
+  --primary: #102b20;
+  --primary-foreground: #ffffff;
+  --secondary: #e8f1ea;
+  --secondary-foreground: #102b20;
+  --muted: #eef4ef; /* turunan */
+  --muted-foreground: #5b6b62; /* turunan */
+  --accent: #e8f1ea;
+  --accent-foreground: #102b20;
+  --destructive: #b42318; /* turunan */
+  --border: #e3ebe5;
+  --input: #e3ebe5;
+  --ring: #22b866;
+  --chart-1: #22b866; /* Primer */
+  --chart-2: #9bcbaa; /* Sekunder */
+  --chart-3: #102b20; /* Tersier */
+  --chart-4: #48d486; /* turunan */
+  --chart-5: #244b37; /* turunan */
+  --radius: 0.75rem;
+
+  /* Panel gelap (login dan kartu gelap). */
+  --panel: #1c3b2b;
+  --panel-foreground: #ffffff;
+  --panel-muted-foreground: #a9c4b5; /* turunan */
+  --brand-accent: #48d486;
+
+  --sidebar: #102b20;
+  --sidebar-foreground: #ffffff;
+  --sidebar-muted-foreground: #8fb3a0; /* turunan */
+  --sidebar-primary: #48d486;
+  --sidebar-primary-foreground: #102b20;
+  --sidebar-accent: #244b37;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #193b2b;
+  --sidebar-ring: #48d486;
+
+  /* Status kesehatan. SEHAT dari desain, RAWAN dan KRITIS turunan (P9). */
+  --status-sehat: #1a7f4b;
+  --status-sehat-soft: #e8f1ea;
+  --status-rawan: #b45309;
+  --status-rawan-soft: #fef3c7;
+  --status-kritis: #b42318;
+  --status-kritis-soft: #fee4e2;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
+/* Tidak ada blok .dark: token gelap dibuat dari desain dark mode nanti.
+   Varian dark: di atas hanya aktif lewat kelas .dark, bukan tema sistem. */
 
 @layer base {
   * {
