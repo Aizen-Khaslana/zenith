@@ -1,14 +1,17 @@
+import { EmptySection } from "@/app/_components/dashboard/empty-section";
+import { HeaderSection } from "@/app/_components/dashboard/header-section";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { requireSession } from "@/server/better-auth/require-session";
 
-// SEMENTARA (T4): hanya agar kerangka dapat diperiksa di browser.
-// Isi final (header-section, empty-section) dibuat pada T5.
+// WP-02: Dashboard hanya keadaan empty (PRD 5.8). Data dan pemilih direktori
+// ditambahkan pada WP-05 dan WP-06.
 export default async function DashboardPage() {
-  await requireSession();
+  const session = await requireSession();
   return (
-    <>
+    <div className="flex flex-col gap-7.5">
       <PageBreadcrumb items={[{ title: "Dashboard" }]} />
-      <h1 className="text-[34px]/[42px] font-semibold">Dashboard</h1>
-    </>
+      <HeaderSection userName={session.user.name} createHref="/directories" />
+      <EmptySection />
+    </div>
   );
 }
