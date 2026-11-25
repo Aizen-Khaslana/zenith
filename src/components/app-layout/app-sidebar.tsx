@@ -39,7 +39,7 @@ export function AppSidebar({ user }: { user: AppUser }) {
       <SidebarContent>
         <NavMain />
       </SidebarContent>
-      <SidebarFooter className="gap-1.5 px-4 pt-0 pb-17 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pb-4">
+      <SidebarFooter className="gap-1.5 px-4 pt-0 pb-17 group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pb-4">
         <NavHelp />
         <NavUser user={user} />
       </SidebarFooter>

@@ -46,8 +46,14 @@ const ICONS: Record<NavIcon, LucideIcon> = {
 };
 
 // Ukuran dari UIReff/02_Dashboard.png (Laporan-WP02 T4).
+// Mode ikon: label setinggi 16 disembunyikan dengan margin -16 (bukan -32
+// bawaan shadcn untuk label h-8), sehingga label tidak menggeser ikon.
 const GROUP_LABEL =
-  "h-4 rounded-none px-3 text-[10px]/4 font-semibold uppercase text-sidebar-muted-foreground";
+  "h-4 rounded-none px-3 text-[10px]/4 font-semibold uppercase text-sidebar-muted-foreground group-data-[collapsible=icon]:-mt-4";
+
+// Mode ikon: jarak tepi ke tepi 12 px antara logo dan kotak ikon 32x32.
+const ICON_MODE_MENU =
+  "group-data-[collapsible=icon]:mt-3 group-data-[collapsible=icon]:gap-3";
 
 function useNav() {
   const pathname = usePathname();
@@ -88,11 +94,11 @@ export function NavMain() {
   const { nav, activeHref } = useNav();
   return (
     <>
-      <SidebarGroup className="px-4 pt-0 group-data-[collapsible=icon]:px-2">
+      <SidebarGroup className="px-4 pt-0 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pb-0">
         <SidebarGroupLabel className={cn(GROUP_LABEL, "mt-13.5")}>
           {APP_LABEL}
         </SidebarGroupLabel>
-        <SidebarMenu className="mt-5 gap-2">
+        <SidebarMenu className={cn("mt-5 gap-2", ICON_MODE_MENU)}>
           {nav.main.map((item) => (
             <MainItem
               key={item.href}
@@ -103,11 +109,11 @@ export function NavMain() {
         </SidebarMenu>
       </SidebarGroup>
       {nav.directory ? (
-        <SidebarGroup className="mt-4 px-4 group-data-[collapsible=icon]:px-2">
+        <SidebarGroup className="mt-4 px-4 group-data-[collapsible=icon]:mt-0 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pt-0">
           <SidebarGroupLabel className={cn(GROUP_LABEL, "normal-case")}>
             {nav.directory.title}
           </SidebarGroupLabel>
-          <SidebarMenu className="mt-3 gap-2">
+          <SidebarMenu className={cn("mt-3 gap-2", ICON_MODE_MENU)}>
             {nav.directory.items.map((item) => (
               <MainItem
                 key={item.href}
@@ -131,7 +137,7 @@ export function NavHelp() {
       <SidebarGroupLabel className={GROUP_LABEL}>
         {nav.help.title}
       </SidebarGroupLabel>
-      <SidebarMenu className="mt-1.5 gap-0">
+      <SidebarMenu className="mt-1.5 gap-0 group-data-[collapsible=icon]:gap-3">
         {nav.help.items.map((item) => {
           const Icon = ICONS[item.icon];
           const active = item.href === activeHref;
